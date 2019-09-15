@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Resources:
   HelloWorldHelloLambda:
@@ -17,31 +17,96 @@ Resources:
           ENV: !Ref Env
           GREETING_TABLE_NAME: !Ref GreetingTableName
           REGION: !Ref AWS::Region
+      #  API Gateway との連携設定を追加
+      Events:
+        HelloWorldApi:
+          Type: Api
+          Properties:
+            Path: /hello
+            Method: POST
+            RestApiId: !Ref HelloWorldApi
 
   HelloWorldLambdaRole:
-    Type: 'AWS::IAM::Role'
+    Type: "AWS::IAM::Role"
     Properties:
       RoleName: !Sub ${Env}-${AppName}-lambda-role
       ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess'
-        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
-        - 'arn:aws:iam::aws:policy/AmazonS3FullAccess'
+        - "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+        - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
       Policies:
         - PolicyName: PermissionToPassAnyRole
           PolicyDocument:
-            Version: '2012-10-17'
+            Version: "2012-10-17"
             Statement:
               Effect: Allow
               Action:
                 - iam:PassRole
               Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/*
       AssumeRolePolicyDocument:
-        Version: '2012-10-17'
+        Version: "2012-10-17"
         Statement:
-          -
-            Effect: 'Allow'
+          - Effect: "Allow"
             Principal:
               Service:
-                - 'lambda.amazonaws.com'
+                - "lambda.amazonaws.com"
             Action:
-              - 'sts:AssumeRole'
+              - "sts:AssumeRole"
+
+  #  API Gateway を追加
+  HelloWorldApi:
+    Type: "AWS::Serverless::Api"
+    Properties:
+      Name: !Sub ${Env}-${AppName}-hello-api
+      StageName: !Ref ApiVersion
+      EndpointConfiguration: REGIONAL
+      Cors:
+        AllowOrigin: "'*'"
+        AllowMethods: "'GET,POST,DELETE'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+      DefinitionBody:
+        swagger: "2.0"
+        info:
+          version: "1.0"
+        x-amazon-apigateway-request-validators:
+          params-only:
+            validateRequestBody: false
+            validateRequestParameters: true
+          all:
+            validateRequestBody: true
+            validateRequestParameters: true
+        paths:
+          /hello:
+            post:
+              consumes:
+                - "application/json"
+              produces:
+                - "application/json"
+              responses:
+                "200":
+                  headers:
+                    Access-Control-Allow-Headers:
+                      type: "string"
+                    Access-Control-Allow-Methods:
+                      type: "string"
+                    Access-Control-Allow-Origin:
+                      type: "string"
+              x-amazon-apigateway-request-validator: all
+              x-amazon-apigateway-integration:
+                type: AWS
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HelloWorldHelloLambda.Arn}/invocations
+                requestTemplates:
+                  application/json: |
+                    $input.json('$')
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+                      method.response.header.Access-Control-Allow-Methods: "'POST'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                    responseTemplates:
+                      application/json: |
+                        $input.json('$')
+                passthroughBehavior: "WHEN_NO_TEMPLATES"
+                httpMethod: "POST"

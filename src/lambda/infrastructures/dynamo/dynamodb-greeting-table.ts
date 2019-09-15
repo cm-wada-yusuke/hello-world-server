@@ -6,7 +6,7 @@ import { GreetingMessage } from '../../domains/greeting/hello-world-use-case';
 const EnvironmentVariableSample = process.env.GREETING_TABLE_NAME!;
 const Region = process.env.REGION!;
 
-const DYNAMO = new AWS.DynamoDB(
+export const DYNAMO = new AWS.DynamoDB(
     {
         apiVersion: '2012-08-10',
         region: Region
