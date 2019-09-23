@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import { load } from './config';
 
 const TMP_DIR = os.tmpdir();
-const TMP_NAME = load('appName')
+const TMP_NAME = load('appName');
 const TMP_PATH = `${TMP_DIR}/${TMP_NAME}`;
 const FORMAT = 'utf8';
 

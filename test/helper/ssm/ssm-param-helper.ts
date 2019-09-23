@@ -24,7 +24,6 @@ export class SsmParamHelper {
       }),
     };
     const result = await ssm.getParameters(getParameterRequest).promise();
-    console.log(result);
     return result
       .Parameters!.map((param) => {
       const name = param.Name!.replace(
